@@ -1,0 +1,16 @@
+{
+  "templates": [
+    {
+      "id": "email_follow_up",
+      "name": "Professional Email Follow-Up",
+      "description": "Follow-up email after no response",
+      "template": "Subject: Follow-up on {{topic}}\n\nHi {{recipientName}},\n\nI hope you are well. I wanted to follow up regarding {{topic}} that we discussed on {{date}}. Please let me know if you have any updates or questions.\n\nBest regards,\n{{senderName}}"
+    },
+    {
+      "id": "bug_report",
+      "name": "Structured Bug Report",
+      "description": "Template to report a software bug clearly",
+      "template": "Title: {{title}}\n\nEnvironment: {{environment}}\nSteps to Reproduce:\n1) {{step1}}\n2) {{step2}}\nExpected: {{expected}}\nActual: {{actual}}\nAdditional Notes: {{notes}}"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "users": [
+    {
+      "id": "2238a3e1-be99-4b03-9e85-29c1cc18aac6",
+      "email": "Test@gmail.com",
+      "passwordHash": "$2a$10$c7pV.seFpQgXDV.paA/AgO3iUJeQ157P/jfuNct47z3mAzAyg77Um",
+      "templates": [
+        {
+          "id": "email_follow_up",
+          "name": "Professional Email Follow-Up",
+          "description": "Follow-up email after no response",
+          "template": "Subject: Follow-up on {{topic}}\n\nHi {{recipientName}},\n\nI hope you are well. I wanted to follow up regarding {{topic}} that we discussed on {{date}}. Please let me know if you have any updates or questions.\n\nBest regards,\n{{senderName}}"
+        },
+        {
+          "id": "bug_report",
+          "name": "Structured Bug Report",
+          "description": "Template to report a software bug clearly",
+          "template": "Title: {{title}}\n\nEnvironment: {{environment}}\nSteps to Reproduce:\n1) {{step1}}\n2) {{step2}}\nExpected: {{expected}}\nActual: {{actual}}\nAdditional Notes: {{notes}}"
+        },
+        {
+          "id": "align_points",
+          "name": "Structured Alignment",
+          "description": "alignment of the provided points",
+          "template": "here is the points :-\n{{points}}\nPlease align it with {{align}} and update the code accordingly."
+        },
+        {
+          "id": "refernce_code",
+          "name": "Reference Code",
+          "description": "Take Reference From Provided Code",
+          "template": "Below is the Reference code details for update the {{newComponent}} file :-\n\n- {{filePath}}\n- {{fileName}}\n- {{modifydate}}"
+        }
+      ]
+    },
+    {
+      "id": "e74d1b62-645b-41f0-999c-51d1f06b95ef",
+      "email": "Test1@gmail.com",
+      "passwordHash": "$2a$10$rfktQMaIEJ5qIZDVmXLBjevKUjkJGX1yIZ0lA3U5p/MxxtXSZgDWm",
+      "templates": [
+        {
+          "id": "email_follow_up",
+          "name": "Professional Email Follow-Up",
+          "description": "Follow-up email after no response",
+          "template": "Subject: Follow-up on {{topic}}\n\nHi {{recipientName}},\n\nI hope you are well. I wanted to follow up regarding {{topic}} that we discussed on {{date}}. Please let me know if you have any updates or questions.\n\nBest regards,\n{{senderName}}"
+        },
+        {
+          "id": "bug_report",
+          "name": "Structured Bug Report",
+          "description": "Template to report a software bug clearly",
+          "template": "Title: {{title}}\n\nEnvironment: {{environment}}\nSteps to Reproduce:\n1) {{step1}}\n2) {{step2}}\nExpected: {{expected}}\nActual: {{actual}}\nAdditional Notes: {{notes}}"
+        },
+        {
+          "id": "expected_response",
+          "name": "Expected Response",
+          "description": "Make Expected Response",
+          "template": "here is the input array {{InputArray}} and I need output like {{ExpectedResult}}"
+        },
+        {
+          "id": "Expected Array Response ",
+          "name": "Expected Array Response ",
+          "description": "Make Expected  of Array",
+          "template": "here is the input array {{InputArray}} and I need output like {{ExpectedResult}} in Array Form."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Template Designer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/axios@1.6.8/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      const { useEffect, useMemo, useState, useCallback } = React;
+
+      function authHeader() {
+        const token = localStorage.getItem('token');
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }
+
+      function useTemplates() {
+        const [templates, setTemplates] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
+        async function fetchTemplates() {
+          try {
+            setLoading(true);
+            const res = await axios.get('/api/templates', { headers: authHeader() });
+            setTemplates(res.data.templates || []);
+          } catch (e) {
+            setError(e?.response?.data?.error || e?.message || 'Failed to load templates');
+          } finally {
+            setLoading(false);
+          }
+        }
+        useEffect(() => { fetchTemplates(); }, []);
+        return { templates, loading, error, refresh: fetchTemplates };
+      }
+
+      function extractPlaceholders(templateString) {
+        const regex = /\{\{\s*([a-zA-Z0-9_\.]+)\s*\}\}/g;
+        const names = new Set();
+        let match;
+        while ((match = regex.exec(templateString)) !== null) {
+          names.add(match[1]);
+        }
+        return Array.from(names);
+      }
+
+      function renderTemplate(templateString, values) {
+        return templateString.replace(/\{\{\s*([a-zA-Z0-9_\.]+)\s*\}\}/g, (_, key) => {
+          const value = values[key];
+          return value !== undefined && value !== null ? String(value) : `{{${key}}}`;
+        });
+      }
+
+      function LoginView({ onAuthenticated, setStatus, status }) {
+        const [mode, setMode] = useState('login');
+        async function handleRegister(e) {
+          e.preventDefault();
+          const email = e?.target?.email?.value;
+          const password = e?.target?.password?.value;
+          try {
+            const res = await axios.post('/api/auth/register', { email, password });
+            localStorage.setItem('token', res.data.token);
+            localStorage.setItem('email', res.data.user.email);
+            onAuthenticated(res.data.user);
+            setStatus('Registered and logged in');
+            window.location.hash = '#/app';
+          } catch (err) {
+            setStatus(err?.response?.data?.error || 'Registration failed');
+          }
+        }
+
+        async function handleLogin(e) {
+          e.preventDefault();
+          const email = e.target.email.value;
+          const password = e.target.password.value;
+          try {
+            const res = await axios.post('/api/auth/login', { email, password });
+            localStorage.setItem('token', res.data.token);
+            localStorage.setItem('email', res.data.user.email);
+            onAuthenticated(res.data.user);
+            setStatus('Logged in');
+            window.location.hash = '#/app';
+          } catch (err) {
+            setStatus(err?.response?.data?.error || 'Login failed');
+          }
+        }
+
+        return (
+          <div className="hero">
+            <div className="container auth-wrap">
+              <div className="auth-card">
+                <div className="row row-between mb-12">
+                  <div className="section-title">Welcome</div>
+                </div>
+                {mode === 'login' ? (
+                  <form onSubmit={handleLogin} className="auth-form">
+                    <div>
+                      <label>Email</label>
+                      <input name="email" type="email" placeholder="you@example.com" required />
+                    </div>
+                    <div>
+                      <label>Password</label>
+                      <input name="password" type="password" placeholder="••••••••" required />
+                    </div>
+                    <button type="submit">Login</button>
+                    <div className="muted-center">No account? <span className="link-text" onClick={() => setMode('register')}>Register</span></div>
+                  </form>
+                ) : (
+                  <form onSubmit={handleRegister} className="auth-form">
+                    <div>
+                      <label>Email</label>
+                      <input name="email" type="email" placeholder="you@example.com" required />
+                    </div>
+                    <div>
+                      <label>Password</label>
+                      <input name="password" type="password" placeholder="Choose a strong password" required />
+                    </div>
+                    <button type="submit" className="secondary">Create account</button>
+                    <div className="muted-center">Already have an account? <span className="link-text" onClick={() => setMode('login')}>Login</span></div>
+                  </form>
+                )}
+                <div className="spacer"></div>
+                <span className="muted">{status}</span>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function TemplatesApp({ user, onLogout }) {
+        const { templates, loading, error, refresh } = useTemplates();
+        if (!user) {
+          return null;
+        }
+        const [selectedId, setSelectedId] = useState(null);
+        const [initialized, setInitialized] = useState(false);
+        const [form, setForm] = useState({ id: '', name: '', description: '', template: '' });
+        const [values, setValues] = useState({});
+        const [output, setOutput] = useState('');
+        const [status, setStatus] = useState('');
+        const [togglebtn,setToogleBtn] = useState(1);
+
+        useEffect(() => {
+          if (!templates.length) {
+            setInitialized(false);
+            setSelectedId(null);
+            return;
+          }
+          if (!initialized) {
+            setSelectedId(templates[0].id);
+            setInitialized(true);
+          }
+        }, [templates, initialized]);
+
+        const selected = useMemo(() => templates.find(t => t.id === selectedId) || null, [templates, selectedId]);
+        const variables = useMemo(() => extractPlaceholders(selected?.template || ''), [selected]);
+
+        useEffect(() => {
+          if (selected) {
+            setForm(selected);
+            setValues(prev => {
+              const next = {};
+              extractPlaceholders(selected.template).forEach(k => {
+                next[k] = prev[k] || '';
+              });
+              return next;
+            });
+            setOutput('');
+          }
+        }, [selected]);
+
+        function handleFormChange(e) {
+          const { name, value } = e.target;
+          setForm(prev => ({ ...prev, [name]: value }));
+        }
+
+        function handleValueChange(name, value) {
+          setValues(prev => ({ ...prev, [name]: value }));
+        }
+
+        async function handleGenerate() {
+          setStatus('');
+          if (!form.template) return;
+          try {
+            const res = await axios.post('/api/generate', { template: form.template, values, improve: true }, { headers: authHeader() });
+            setToogleBtn(2);
+            setOutput(res.data.resolved || '');
+          } catch (e) {
+            setStatus('Failed to generate');
+          }
+        }
+
+        async function handleSaveNew() {
+          if (!form.id || !form.name || !form.template) {
+            setStatus('Please provide id, name, and template');
+            return;
+          }
+          try {
+            const newId = form.id;
+            await axios.post('/api/templates', form, { headers: authHeader() });
+            setStatus('Saved');
+            await refresh();
+            setSelectedId(newId);
+          } catch (e) {
+            const message = e?.response?.data?.error || 'Failed to save';
+            setStatus(message);
+          }
+        }
+
+        async function handleUpdate() {
+          if (!selected) return;
+          try {
+            await axios.put(`/api/templates/${selected.id}`, { name: form.name, description: form.description, template: form.template }, { headers: authHeader() });
+            setStatus('Updated');
+            await refresh();
+          } catch (e) {
+            setStatus('Failed to update');
+          }
+        }
+
+        async function handleCopy() {
+          try {
+            await navigator.clipboard.writeText(output);
+            setStatus('Copied');
+          } catch {}
+        }
+
+        return (
+          <div>
+            <h1>Prompt Template Designer</h1>
+            <div className="card card-spaced">
+              <div className="row row-between">
+                <div>
+                  <div className="section-title">Welcome</div>
+                  <div className="muted">{user.email}</div>
+                </div>
+                <button className="ghost" onClick={onLogout}>Logout</button>
+              </div>
+            </div>
+            <div className="grid">
+              <div className="card">
+                <div className="section-title">Default and Saved Templates</div>  
+                {loading && <div className="muted">Loading templates…</div>}
+                {error && <div className="muted">{error}</div>}
+                <div className="list">
+                  {templates.map(t => (
+                    <div key={t.id} className={"list-item" + (t.id === selectedId ? ' active' : '')} onClick={() => setSelectedId(t.id)}>
+                      <div className="list-item-title">{t.name}</div>
+                      <div className="muted">{t.id}</div>
+                      {t.description ? <div className="muted">{t.description}</div> : null}
+                    </div>
+                  ))}
+                </div>
+                <div className="spacer"></div>
+                <div className="toolbar">
+                  <button className="secondary" onClick={() => { setForm({ id: '', name: '', description: '', template: '' }); setSelectedId(null); setValues({}); setOutput(''); setStatus(''); }}>New Template</button>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="section-title">Template Editor</div>
+                <div className="form-grid">
+                  <div>
+                    <label>Template ID</label>
+                    <input name="id" value={form.id} onChange={handleFormChange} placeholder="unique_id" disabled={!!selected} />
+                  </div>
+                  <div>
+                    <label>Name</label>
+                    <input name="name" value={form.name} onChange={handleFormChange} placeholder="Human-friendly name" />
+                  </div>
+                </div>
+                <div className="spacer"></div>
+                <label>Description</label>
+                <input name="description" value={form.description} onChange={handleFormChange} placeholder="Optional" />
+                <div className="spacer"></div>
+                <label>Template</label>
+                <textarea name="template" value={form.template} onChange={handleFormChange} placeholder="Use placeholders like {{variable}}"></textarea>
+                <div className="spacer"></div>
+                <div className="toolbar">
+                  {!selected ? (
+                    <button onClick={handleSaveNew}>Save Template</button>
+                  ) : (
+                    <button onClick={handleUpdate}>Update Template</button>
+                  )}
+                  <span className="muted">{status}</span>
+                </div>
+                <div className="spacer"></div>
+                <div>
+                  <div className="section-title">Variables</div>
+                  <div>{variables?.length === 0 ? <span className="muted">No placeholders found</span> : variables?.map(v => <span key={v} className="pill">{v}</span>)}</div>
+                  <div className="spacer"></div>
+                  <div className="variables-grid">
+                    {variables?.map(v => (
+                      <div key={v}>
+                        <label>{v}</label>
+                        <input value={values[v] || ''} onChange={e => handleValueChange(v, e?.target?.value)} placeholder={`Enter value for ${v}`} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="spacer"></div>
+                <div className="toolbar">
+                  <button onClick={handleGenerate}>Generate Resolved Prompt</button>
+                  <button className="ghost" onClick={() => { setOutput(renderTemplate(form.template || '', values)); }}>Preview Prompt</button>
+                  <span className="muted">Tip: placeholders are written as <span className="kbd">{'{{variable}}'}</span></span>
+                </div>
+                <div className="spacer"></div>
+                <label>{togglebtn == 1 ? 'Preview Prompt':'Resolved Prompt'}</label>
+                <pre className="output">{output || '—'}</pre>
+                <div className="footer">
+                  <span className="muted">Copy to clipboard and paste into your AI tool</span>
+                  <button className="secondary" onClick={handleCopy}>Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function useHashRoute() {
+        const [path, setPath] = useState(() => window.location.hash.replace('#', '') || '/login');
+        useEffect(() => {
+          function onHashChange() { setPath(window.location.hash.replace('#', '') || '/login'); }
+          window.addEventListener('hashchange', onHashChange);
+          return () => window.removeEventListener('hashchange', onHashChange);
+        }, []);
+        const navigate = useCallback((p) => {
+          window.location.hash = `#${p}`;
+        }, []);
+
+        return [path, navigate];
+      }
+
+      function App() {
+        const [user, setUser] = useState(() => {
+          const email = localStorage.getItem('email');
+          return email ? { email } : null;
+        });
+        const [status, setStatus] = useState('');
+        const [path, navigate] = useHashRoute();
+
+        useEffect(() => {
+          const isAuthenticated = !!localStorage.getItem('token');
+          if (!isAuthenticated && path !== '/login') {
+            navigate('/login');
+          } else if (isAuthenticated && path === '/login') {
+            navigate('/app');
+          }
+        }, [path, navigate]);
+
+        const hasToken = !!localStorage.getItem('token');
+        const showLogin = !hasToken || !user || path === '/login';
+
+        return (
+          <div className="container">
+            {showLogin ? (
+              <LoginView onAuthenticated={setUser} status={status} setStatus={setStatus} />
+            ) : (
+              <TemplatesApp user={user} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('email'); setUser(null); navigate('/login'); }} />
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+  </html>
+
+
