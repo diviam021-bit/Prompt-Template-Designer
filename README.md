@@ -12,7 +12,7 @@ Features
 Tech Stack
 - Backend: Node.js, Express
 - Frontend: React 18 (CDN), Babel (CDN), served as static files
-
+- AI
 Getting Started
 
 Prerequisites
